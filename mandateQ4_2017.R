@@ -11,8 +11,6 @@ mandates1 <- read.csv("Q4_2017mandates.csv") ### old way
 mandates <- read_csv("Q4_2017mandates.csv") ### new way
 
 
-levels(mandates$FundCountry)
-
 
 US_PNC1 <- USQ %>%
   group_by(SearchStatus) %>%

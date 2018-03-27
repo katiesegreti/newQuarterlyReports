@@ -1,41 +1,16 @@
 #--------------------------------------------
-
+###### GLOBAL FUNCTIONS ################
 #is even and is odd functions
 is.even <- function(x){x %%2 == 0}
 is.odd <- function(x){x %%2 == 1}
-
-pasteNumber <- function(x, y) {
-  paste(x, y)
-}
+### paste number at end of column names so you can join
+pasteNumber <- function(x, y) {  paste(x, y)}
 
 #-----function
 #-----------QUARTERLY MANDATE SUMMARY - POTENTIAL, NEW, COMPLETED
 #----FUNCTION: POTENTIAL NEW COMPLETED ASSET CLASS QUARTER MATRIX  USQ,USPNC1,USPNC2
-PNCtable <- function(df1){
-  AC <- (levels(droplevels(df1$MainAssetClass)))
-  z <- rep(0, length(AC)*length(status)*2)
-  #create matrix
-  m1 <- matrix(z, nrow=length(AC), ncol=length(status2))
-  rownames(m1) <- AC
-  colnames(m1) <- status2
-  #fill matrix
-  for(i in 1:length(status2)){
-    for(j in 1:length(AC)){
-      if(is.odd(i)){
-        m1[j,i] <- nrow(df1[df1$SearchStatus==status2[i]&df1$MainAssetClass==AC[j],])
-      }else{
-        m1[j,i] <- sum(df1[df1$SearchStatus==status2[i]&df1$MainAssetClass==AC[j],"MandateSizeAmount"])
-      }
-    }
-  }
-  return(m1)
-}
-PNCtable(USQ)
 
-
-
-
-PNCtableNew <- function(df) {
+PNCtable <- function(df) {
   tbl1 <- df %>% 
     group_by(MainAssetClass, SearchStatus) %>%
     summarise(total = n()) %>%
@@ -44,15 +19,24 @@ PNCtableNew <- function(df) {
     group_by(MainAssetClass, SearchStatus) %>%
     summarise(total = sum(MandateSizeAmount)) %>%
     spread(SearchStatus, total)
-  plainstatus <- colnames(tbl1)[2:length(colnames(tbl1))]
-  colnames(tbl1)[2:length(colnames(tbl1))] <- map_chr(plainstatus, pasteNumber, 1)
-  colnames(tbl2)[2:length(colnames(tbl2))] <- map_chr(plainstatus, pasteNumber, 2)
+  colznmz <- colnames(tbl2)[-1]
+  colnames(tbl2)[-1] <- map_chr(colznmz, pasteNumber, 1)
   combined <- tbl1 %>% left_join(tbl2)
   combined <- combined[,c(1,4,7,3,6,2,5)]
   return(combined)
 }
-USPNC <- PNCtableNew(USQ)
-#######
+USPNC <- PNCtable(USQ)
+
+
+
+
+
+
+
+
+
+####### FTPtable the new way 
+## still have to get totals column
 FTtableNEW <- function(df) {
   tbl1 <- df %>%
     group_by(FundType, MainAssetClass) %>%
@@ -67,58 +51,27 @@ FTtableNEW <- function(df) {
 }
 USP_FT <- FTtableNEW(USQP)
 
-#----FUNCTION: FUND TYPE BY ASSET CLASS AND MANDATE REGION
-FTtable <- function(df1){
-  AC <- (levels(droplevels(df1$MainAssetClass)))
-  FT <- (levels(droplevels(df1$FundType)))
-  MR <- (levels(droplevels(df1$MandateRegion)))
-  ACMR <- c("Total", AC, MR)
-  z <- rep(0, length(ACMR)*length(FT))
-  #create matrix
-  m1 <- matrix(z, nrow=length(FT), ncol=length(ACMR))
-  rownames(m1) <- FT
-  colnames(m1) <- ACMR
-  #fill matrix
-  for(i in 1:length(FT)){
-    for(j in 2:length(ACMR)){
-      m1[i,j] <- nrow(df1[df1$FundType==FT[i]&(df1$MainAssetClass==ACMR[j]|df1$MandateRegion==ACMR[j]),])
-    }
-  }
-  #get totlas
-  for(i in 1:length(FT)){
-    m1[i,1] <- nrow(df1[df1$FundType==FT[i],])
-  }
-  return(m1)
-}
+
+
 
 #---- Asset class by investment region
-ACbyMRtable <- function(df1){
-  AC <- (levels(droplevels(df1$MainAssetClass)))
-  MR <- (levels(droplevels(df1$MandateRegion)))
-  MR2 <- rep(MR,times=1, each=2)
-  MR2 <- c(MR2, "total#", "total$")
-  z <- rep(0, length(AC)*length(MR2))
-  #create matrix
-  m1 <- matrix(z, nrow=length(AC), ncol=length(MR2))
-  rownames(m1) <- AC
-  colnames(m1) <- MR2
-  #fill matrix
-  for(i in 1:length(AC)){
-    for(j in 1:length(MR2)){
-      if(is.odd(j)){
-        m1[i,j] <- nrow(df1[df1$MainAssetClass==AC[i]&df1$MandateRegion==MR2[j],])
-      }else{
-        m1[i,j] <- sum(df1[df1$MainAssetClass==AC[i]&df1$MandateRegion==MR2[j],"MandateSizeAmount"])
-      }
-    }
-  }
-  #get totals
-  for(i in 1:length(AC)){
-    m1[i, length(MR2)-1] <- nrow(df1[df1$MainAssetClass==AC[i],])
-    m1[i,length(MR2)] <- sum(df1[df1$MainAssetClass==AC[i],"MandateSizeAmount"])
-  }
-  return(m1)
+ACbyMRtable <- function(df) {
+  tbl1 <- df %>%
+    group_by(MainAssetClass, MandateRegion) %>%
+    summarise(total = n()) %>%
+    spread(MandateRegion, total)
+  tbl2 <- df %>%
+    group_by(MainAssetClass, MandateRegion) %>%
+    summarise(total = sum(MandateSizeAmount)) %>%
+    spread(MandateRegion, total)
+  colznmz <- colnames(tbl2)[-1]
+  colnames(tbl2)[-1] <- map_chr(colznmz, pasteNumber, 1)
+  tbl1 %>% left_join(tbl2)
 }
+USQAC <- ACbyMRtable(USQP)
+
+###
+
 
 
 #---- SubAsset class by investment region for assete class
