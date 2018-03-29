@@ -5,11 +5,29 @@ is.even <- function(x){x %%2 == 0}
 is.odd <- function(x){x %%2 == 1}
 ### paste number at end of column names so you can join
 pasteNumber <- function(x, y) {  paste(x, y)}
+##total number of mandates: df, 2 variables
+totalN <- function(df, rowVar, colVar) {
+  x <- enquo(rowVar)
+  y <- enquo(colVar)
+  df %>%
+    group_by(!!x, !!y) %>%
+    summarise(total = n()) %>%
+    spread(!!y, total)
+}
+##total value of mandates: df, 2 variables
+totalSum <- function(df, rowVar, colVar) {
+  x <- enquo(rowVar)
+  y <- enquo(colVar)
+  df %>%
+    group_by(!!x, !!y) %>%
+    summarise(total = sum(MandateSizeAmount)) %>%
+    spread(!!y, total)
+}
 
 #-----function
 #-----------QUARTERLY MANDATE SUMMARY - POTENTIAL, NEW, COMPLETED
 #----FUNCTION: POTENTIAL NEW COMPLETED ASSET CLASS QUARTER MATRIX  USQ,USPNC1,USPNC2
-
+##updated
 PNCtable <- function(df) {
   tbl1 <- df %>% 
     group_by(MainAssetClass, SearchStatus) %>%
@@ -53,7 +71,7 @@ USP_FT <- FTtableNEW(USQP)
 
 
 
-
+### updated
 #---- Asset class by investment region
 ACbyMRtable <- function(df) {
   tbl1 <- df %>%
@@ -68,12 +86,19 @@ ACbyMRtable <- function(df) {
   colnames(tbl2)[-1] <- map_chr(colznmz, pasteNumber, 1)
   tbl1 %>% left_join(tbl2)
 }
-USQAC <- ACbyMRtable(USQP)
 
-###
+ACbyMRtable1 <- function(df) {
+  tbl1 <- totalN(df, MainAssetClass, MandateRegion)
+  tbl2 <- totalSum(df, MainAssetClass, MandateRegion)
+  colznmz <- colnames(tbl2)[-1]
+  colnames(tbl2)[-1] <- map_chr(colznmz, pasteNumber, 1)
+  tbl1 %>% left_join(tbl2)
+}
+USQAC1 <- ACbyMRtable1(USQP)
 
 
 
+### STILL NEED TO UPDATE
 #---- SubAsset class by investment region for assete class
 SACbyMRtable <- function(df1, assetclass){
   dftemp <- df1[df1$MainAssetClass == assetclass,]
@@ -105,7 +130,7 @@ SACbyMRtable <- function(df1, assetclass){
   return(m1)
 }
 
-
+### STILL NEED TO UPDATE
 #---- Investment approach by investment region for equity and fixed Income
 IAbyMRtable <- function(df1, assetclass){
   dftemp <- df1[df1$MainAssetClass == assetclass,]
@@ -139,7 +164,7 @@ IAbyMRtable <- function(df1, assetclass){
 
 
   
-  
+### STILL NEED TO UPDATE 
 #---- style by investment region for equity 
 EQStyletable <- function(df1){
   dftemp <- df1[df1$MainAssetClass == "Equity",]
@@ -170,7 +195,7 @@ EQStyletable <- function(df1){
   }
   return(m1)
 }
-
+### STILL NEED TO UPDATE
 EQCaptable <- function(df1){
   dftemp <- df1[df1$MainAssetClass == "Equity",]
   stylee <- levels(droplevels(dftemp$Style))
@@ -215,7 +240,7 @@ EQCaptable <- function(df1){
   }
   return(m1)
 }
-
+### STILL NEED TO UPDATE
 AltsTable <- function(df1){
   dftemp <- df1[df1$MainAssetClass%in%alternatives,]
   AC <- levels(droplevels(dftemp$MainAssetClass))
@@ -260,7 +285,7 @@ AltsTable <- function(df1){
   }
   return(m1)
 }
-
+### STILL NEED TO UPDATE
 #-----Month table function
 MonthTable <- function(df1){
   monthz <- c("01","02","03","04","05","06","07","08", "09","10","11","12")
@@ -276,7 +301,7 @@ MonthTable <- function(df1){
   }
   return(m1)
 }
-
+### STILL NEED TO UPDATE
 #-----Year Table Function
 YearTable <- function(df1){
   yrs <- c("2015","2016","2017")
@@ -299,7 +324,7 @@ YearTable <- function(df1){
   }
   return(m1)
 }
-
+### STILL NEED TO UPDATE
 #----FUNCTION: top consultants: # and $
 consTable <- function(df1, sortz=1){
   consz <- levels(droplevels(df1$SearchConsultant))
@@ -322,7 +347,7 @@ consTable <- function(df1, sortz=1){
   
   return(m2)
 }
-
+### STILL NEED TO UPDATE
 #---function - search consultant matrix
 consMX <- function(df0){
   df1 <- df0[df0$SearchConsultant!="Unknown",]
