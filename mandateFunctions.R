@@ -23,6 +23,8 @@ totalSum <- function(df, rowVar, colVar) {
     summarise(total = sum(MandateSizeAmount)) %>%
     spread(!!y, total)
 }
+#### WRITE A GLOBAL FUNCTION TO ADD 1 TO tbl2 COLUMN NAMES SO YOU CAN JOIN 
+
 
 #-----function
 #-----------QUARTERLY MANDATE SUMMARY - POTENTIAL, NEW, COMPLETED
