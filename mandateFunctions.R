@@ -15,12 +15,14 @@ totalN <- function(df, rowVar, colVar) {
   return(cbind(df1, Total = rowSums(df1[-1], na.rm = TRUE)))
 }
 
+###check to make sure replace_na() is working right
 ##total value of mandates: df, 2 variables
 totalSum <- function(df, rowVar, colVar) {
   x <- enquo(rowVar)
   y <- enquo(colVar)
   df1 <- df %>%
     group_by(!!x, !!y) %>%
+    replace_na(list(MandateSizeAmount = 0)) %>%
     summarise(total = sum(MandateSizeAmount)) %>%
     spread(!!y, total) %>%
     replace(., is.na(.), 0)
@@ -119,6 +121,7 @@ AltsTable <- function(df1) {
   tbl1 <- cbind(tbl1, Total = rowSums(tbl1[-1], na.rm = TRUE))
   tbl2 <- df1 %>%
     filter(MainAssetClass %in% alternatives) %>%
+    replace_na(list(MandateSizeAmount = 0)) %>%
     group_by(MainAssetClass, SubAssetClass, MandateRegion) %>%
     summarise(total = sum(MandateSizeAmount)) %>%
     replace_na(list(SubAssetClass = "(Unspecified)")) %>%
@@ -137,6 +140,7 @@ AltsTable <- function(df1) {
 MonthTable <- function(df1) {
   moz <- df1 %>%
     group_by(Month) %>%
+    replace_na(list(MandateSizeAmount = 0)) %>%
     summarise(Total = n(), SumTotal = sum(MandateSizeAmount)) %>%
     mutate(Month = month.abb[as.integer(Month)]) %>%
     replace(., is.na(.), 0)
@@ -158,6 +162,7 @@ YearTable <- function(df1) {
 #----FUNCTION: top consultants: # and $
 consTable <- function(df1, sortz = 1) {
   conz <- df1 %>%
+    replace_na(list(MandateSizeAmount = 0)) %>%
     group_by(SearchConsultant) %>%
     summarise(Total = n(), SumTotal = sum(MandateSizeAmount)) %>%
     replace(., is.na(.), 0)

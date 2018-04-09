@@ -1,50 +1,50 @@
 
 #######################CREATE DATA FRAMES############################
 #######################Create regional data frames(12 months)########
-ALLmanagersY <- managers[managers$Year == "2017",]
-USmanagersY <- managers[managers$FundRegion == "US" & managers$Year == "2017",]
-##UKmanagersY <- managers[managers$FundRegion == "UK" & managers$Year == "2017",]
-EURmanagersY <- managers[managers$FundRegion == "EUR" & managers$Year == "2017",]
-AUSmanagersY <- managers[managers$FundRegion == "AUS" & managers$Year == "2017",]
-ASIAmanagersY <- managers[managers$FundRegion == "ASIA" & managers$Year == "2017",]
+ALLmanagersY <- filter(managers, Year == "2017")
+USmanagersY <- filter(managers, FundRegion == "US" & Year == "2017")
+##UKmanagersY <- filter(managers, FundRegion == "UK" & Year == "2017")
+EURmanagersY <- filter(managers, FundRegion == "EUR" & Year == "2017")
+AUSmanagersY <- filter(managers, FundRegion == "AUS" & Year == "2017")
+ASIAmanagersY <- filter(managers, FundRegion == "ASIA" & Year == "2017")
 #######################Create regional data frames(quarterly)########
-ALLmanagersQ <- ALLmanagersY[ALLmanagersY$Quarter == "Q4",]
-USmanagersQ <- USmanagersY[USmanagersY$Quarter == "Q4",]
-##UKmanagersQ <- UKmanagersY[UKmanagersY$Quarter == "Q4",]
-EURmanagersQ <- EURmanagersY[EURmanagersY$Quarter == "Q4",]
-AUSmanagersQ <- AUSmanagersY[AUSmanagersY$Quarter == "Q4",]
-ASIAmanagersQ <- ASIAmanagersY[ASIAmanagersY$Quarter == "Q4",]
+ALLmanagersQ <- filter(ALLmanagersY, Quarter == "Q4")
+USmanagersQ <- filter(USmanagersY, Quarter == "Q4")
+##UKmanagersQ <- filter(UKmanagersY, Quarter == "Q4")
+EURmanagersQ <- filter(EURmanagersY, Quarter == "Q4")
+AUSmanagersQ <- filter(AUSmanagersY, Quarter == "Q4")
+ASIAmanagersQ <- filter(ASIAmanagersY, Quarter == "Q4")
 
 #spotlights for Europe report
-UKmanagersY <- EURmanagersY[EURmanagersY$FundCountry == "United Kingdom",]
+UKmanagersY <- filter(EURmanagersY, FundCountry == "United Kingdom")
 
-NordicmanagersY <- EURmanagersY[EURmanagersY$FundCountry %in% Nordics,]
+NordicmanagersY <- filter(EURmanagersY, FundCountry %in% Nordics)
 
 
 #asset class specific manager reports
-USeqManagersQ <- USmanagersQ[USmanagersQ$MainAssetClass == "Equity",]
-USeqManagersY <- USmanagersY[USmanagersY$MainAssetClass == "Equity",]
-USFImanagersQ <- USmanagersQ[USmanagersQ$MainAssetClass == "Fixed Income",]
-USFImanagersY <- USmanagersY[USmanagersY$MainAssetClass == "Fixed Income",]
-USREmanagersQ <- USmanagersQ[USmanagersQ$MainAssetClass == "Real Estate",]
-USREmanagersY <- USmanagersY[USmanagersY$MainAssetClass == "Real Estate",]
-USPEmanagersQ <- USmanagersQ[USmanagersQ$MainAssetClass == "Private Equity",]
-USPEmanagersY <- USmanagersY[USmanagersY$MainAssetClass == "Private Equity",]
-USHFmanagersQ <- USmanagersQ[USmanagersQ$MainAssetClass == "Hedge Funds",]
-USHFmanagersY <- USmanagersY[USmanagersY$MainAssetClass == "Hedge Funds",]
-USOAmanagersQ <- USmanagersQ[USmanagersQ$MainAssetClass %in% alternatives,]
-USOAmanagersY <- USmanagersY[USmanagersY$MainAssetClass %in% alternatives,]
+USeqManagersQ <- filter(USmanagersQ, MainAssetClass == "Equity")
+USeqManagersY <- filter(USmanagersY, MainAssetClass == "Equity")
+USFImanagersQ <- filter(USmanagersQ, MainAssetClass == "Fixed Income")
+USFImanagersY <- filter(USmanagersY, MainAssetClass == "Fixed Income")
+USREmanagersQ <- filter(USmanagersQ, MainAssetClass == "Real Estate")
+USREmanagersY <- filter(USmanagersY, MainAssetClass == "Real Estate")
+USPEmanagersQ <- filter(USmanagersQ, MainAssetClass == "Private Equity")
+USPEmanagersY <- filter(USmanagersY, MainAssetClass == "Private Equity")
+USHFmanagersQ <- filter(USmanagersQ, MainAssetClass == "Hedge Funds")
+USHFmanagersY <- filter(USmanagersY, MainAssetClass == "Hedge Funds")
+USOAmanagersQ <- filter(USmanagersQ, MainAssetClass %in% alternatives)
+USOAmanagersY <- filter(USmanagersY, MainAssetClass %in% alternatives)
 
 
-EUReqManagersQ <- EURmanagersQ[EURmanagersQ$MainAssetClass == "Equity",]
-EUReqManagersY <- EURmanagersY[EURmanagersY$MainAssetClass == "Equity",]
-EURFImanagersQ <- EURmanagersQ[EURmanagersQ$MainAssetClass == "Fixed Income",]
-EURFImanagersY <- EURmanagersY[EURmanagersY$MainAssetClass == "Fixed Income",]
-EURREmanagersQ <- EURmanagersQ[EURmanagersQ$MainAssetClass == "Real Estate",]
-EURREmanagersY <- EURmanagersY[EURmanagersY$MainAssetClass == "Real Estate",]
+EUReqManagersQ <- filter(EURmanagersQ, MainAssetClass == "Equity")
+EUReqManagersY <- filter(EURmanagersY, MainAssetClass == "Equity")
+EURFImanagersQ <- filter(EURmanagersQ, MainAssetClass == "Fixed Income")
+EURFImanagersY <- filter(EURmanagersY, MainAssetClass == "Fixed Income")
+EURREmanagersQ <- filter(EURmanagersQ, MainAssetClass == "Real Estate")
+EURREmanagersY <- filter(EURmanagersY, MainAssetClass == "Real Estate")
 
-EUROAmanagersQ <- EURmanagersQ[EURmanagersQ$MainAssetClass %in% alternativesAll,]
-EUROAmanagersY <- EURmanagersY[EURmanagersY$MainAssetClass %in% alternativesAll,]
+EUROAmanagersQ <- filter(EURmanagersQ, MainAssetClass %in% alternativesAll)
+EUROAmanagersY <- filter(EURmanagersY, MainAssetClass %in% alternativesAll)
 
 
 

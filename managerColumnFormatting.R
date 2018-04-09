@@ -24,8 +24,6 @@ managers$SearchConsultantCountry <- NULL
 managers$Duration <- NULL
 managers$BenchmarkIndex <- NULL
 managers$AssetClass <- NULL
-
-managers$AccountSizeCurrency <- NULL
 managers$GeneralConsultant <- NULL
 managers$GeneralConsultantParentFirm <- NULL
 managers$GeneralConsultantCountry <- NULL
@@ -51,8 +49,8 @@ managers$AssetManagerWebSiteURL <- NULL
 fundRegionz <- function(x) {
   if(x == "United States") {
     return("US")
-  }else if(x == "United Kingdom") {
-    return("UK")
+  # }else if(x == "United Kingdom") {
+  #   return("UK")
   }else if(x %in% Europe) {
     return("EUR")
   }else if(x %in% Asia) {

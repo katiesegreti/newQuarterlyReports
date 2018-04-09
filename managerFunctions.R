@@ -13,94 +13,73 @@ mgrTable <- function(df1, sortz = 1) {
   }
   return(mgrz)
 }
-mgrTable(USmanagersQ)
+mgrtabletestUSQ <- mgrTable(USmanagersQ)
 
+## UPDATED 
 ##----function #2  select asset class for manager table (default sorts by $, enter sortz to sort by #)
-mgrTableAC <- function(df1, assetclass, sortz=1){
-  dftemp <- df1[df1$MainAssetClass==assetclass,]
-  MGR <- levels(droplevels(dftemp$AssetManager))
-  totals <- c("total1", "total2")
-  z <- rep(0, length(MGR)*length(totals))
-  #create matrix
-  m1 <- matrix(z, nrow=length(MGR), ncol=length(totals))
-  rownames(m1) <- MGR
-  colnames(m1) <- totals
-  #fill matrix
-  for(i in 1:length(MGR)){
-    m1[i,1] <- nrow(dftemp[dftemp$AssetManager==MGR[i],])
-    m1[i,2] <- sum(dftemp[dftemp$AssetManager==MGR[i], "AccountSizeAmount"])
-  }
-  if(length(MGR)==1){
-    return(m1)
-  } 
-  if(sortz==1){
-    m2 <- m1[order(m1[,2],m1[,1],decreasing=TRUE),]
-  }else{
-    m2 <- m1[order(m1[,1],m1[,2],decreasing=TRUE),]
-  }
-  return(m2)
+mgrTableAC <- function(df0, assetclass, sortz = 1) {
+  df1 <- filter(df0, MainAssetClass == assetclass)
+  mgrTable(df1, sortz = sortz)
 }
 
-
+mgrTableAC(USmanagersQ, "Equity", sortz = 2)
+str(USmanagersQ$MainAssetClass)
+managers$MainAssetClass <- factor(managers$MainAssetClass)
 ##------function3 Asset Class totals
-roundup <- function(df1){
-  AC <- levels(droplevels(df1$MainAssetClass))
-  totals <- c("total1", "total2")
-  z <- rep(0, length(AC)*length(totals))
-  #create matrix
-  m1 <- matrix(z, nrow=length(AC), ncol=length(totals))
-  rownames(m1) <- AC
-  colnames(m1) <- totals
-  #fill matrix
-  for(i in 1:length(AC)){
-    m1[i,1] <- nrow(df1[df1$MainAssetClass==AC[i],])
-    m1[i,2] <- sum(df1[df1$MainAssetClass==AC[i], "AccountSizeAmount"])
-  }
-  m2 <- m1[order(m1[,2],m1[,1],decreasing=TRUE),]
-  return(m2)
+roundup <- function(df1) {
+  rndp <- df1 %>%
+    replace_na(list(AccountSizeAmount = 0)) %>%
+    group_by(MainAssetClass) %>%
+    summarise(Total = n(), SumTotal = sum(AccountSizeAmount))
 }
-
 USQroundup <- roundup(USmanagersQ)
+USYroundup <- roundup(USmanagersY)
+
+testAClist <- USQroundup$MainAssetClass
+
+topMgr <- function(df1, assetclass) {
+  top <- mgrTableAC(df1, assetclass)
+  if(length(top) > 1 & is.na(top[1,1])) {
+    return(top[2,])
+  } else{
+  return(top[1,])
+  }
+}
+mgrTableAC(USmanagersY, "Equity")
+topMgr(USmanagersY, "Equity")
+mgrtabletestUSQ[1,]
+is.na(mgrtabletestUSQ[1,1])
 
 #-----function4  returns top manager (by disclosed value), used in topManagers
-topmgr <- function(df0, assetclass){
-  df1 <- df0[df0$MainAssetClass==assetclass,]
-  MGR <- levels(droplevels(df1$AssetManager))
-  totals <- c("total1", "total2")
-  z <- rep(0, length(MGR)*length(totals))
-  #create matrix
-  m1 <- matrix(z, nrow=length(MGR), ncol=length(totals))
-  rownames(m1) <- MGR
-  colnames(m1) <- totals
-  #fill matrix
-  if(length(MGR)==1){
-    return(MGR)
-  }
-  for(i in 1:length(MGR)){
-    m1[i,1] <- nrow(df1[df1$AssetManager==MGR[i],])
-    m1[i,2] <- sum(df1[df1$AssetManager==MGR[i], "AccountSizeAmount"])
-  }
-  m2 <- m1[order(m1[,2],m1[,1],decreasing=TRUE),]
-  cnames <- rownames(m2)
-  return(cnames[1])
+ACzz <- USYroundup$MainAssetClass
+dftesting <- data.frame("AssetClass" = ACzz, "Manager" = rep(0, length(ACzz)), 
+                        "MgrTotal1" = rep(0, length(ACzz)), "MgrTotal2" = rep(0, length(ACzz)))
+dfz <- list(rep("USmanagersY", length(ACzz)))
+ACzz1 <- list(ACzz)
+testmapss <- invoke_map("topMgr", df1 = dfz, assetclass = ACzz1)
+topMgr(USmanagersY, "Alternative")
+
+makeList <- function(x, df1 = .) {
+  parama <- list(df1 = df1, assetclass = x)
+  return(parama)
 }
+ll <- makeList("Equity", USmanagersY)
+llcj <- map(ACzz, makeList)
 
 #------function5 calls topmgr to get a list of top managers by asset class, used in roundup2
-topManagers <- function(df1){
-  AC <- levels(droplevels(df1$MainAssetClass))
-  topmgrz <- vector()
-  for(i in 1:length(AC)){
-    mgr <- topmgr(df1, AC[i])
-    if(is.null(mgr)){
-      topmgrz <- c(topmgrz, "Unknown")
-    }else{
-      topmgrz <- c(topmgrz, mgr)
-    }
-  }
-  return(topmgrz)
-}
 
 #------function6 totals by asset class, with top managers for each asset class. calls topManagers.
+roundup2 <- function(df1) {
+  rndp1 <- df1 %>%
+    replace_na(list(AccountSizeAmount = 0)) %>%
+    group_by(MainAssetClass) %>%
+    summarise(Total = n(), SumTotal = sum(AccountSizeAmount))
+  ACz <- rndp1$MainAssetClass
+  rndp2 <- data.frame("AssetClass" = ACz, "Manager" = rep(0, length(ACz)), 
+                      "MgrTotal1" = rep(0, length(ACz)), "MgrTotal2" = rep(0, length(ACz)))
+}
+
+
 roundup2 <- function(df1) {
   AC <- levels(droplevels(df1$MainAssetClass))
   mgrz <- topManagers(df1)
@@ -114,7 +93,7 @@ roundup2 <- function(df1) {
   }
   return(dfnew)
 }
-
+roundup2(USmanagersQ)
 #--------function7 Month Tables (by # of mandates is default, enter sortz to sort by $)
 monthTable <- function(df1, sortz=1){
   monthz <- c("10","11","12","01","02","03","04","05","06","07","08","09")
