@@ -1,8 +1,39 @@
+#--------------------------------------------
+###### GLOBAL FUNCTIONS ################
+
+### paste number at end of column names so you can join
+pasteNumber <- function(x, y) {  paste(x, y)}
+##total number of mandates: df, 2 variables
+totalN <- function(df, rowVar, colVar) {
+  x <- enquo(rowVar)
+  y <- enquo(colVar)
+  df1 <- df %>%
+    group_by(!!x, !!y) %>%
+    summarise(total = n()) %>%
+    spread(!!y, total) %>%
+    replace(., is.na(.), 0)
+  return(cbind(df1, Total = rowSums(df1[-1], na.rm = TRUE)))
+}
+###check to make sure replace_na() is working right
+##total value of mandates: df, 2 variables
+totalSum <- function(df, rowVar, colVar) {
+  x <- enquo(rowVar)
+  y <- enquo(colVar)
+  df1 <- df %>%
+    group_by(!!x, !!y) %>%
+    replace_na(list(AccountSizeAmount = 0)) %>%
+    summarise(total = sum(AccountSizeAmount)) %>%
+    spread(!!y, total) %>%
+    replace(., is.na(.), 0)
+  return(cbind(df1, Total1 = rowSums(df1[-1], na.rm = TRUE)))
+}
+
 
 # updated
 ##------function #1 manager table sorted (default sorts by $, enter sortz to sort by #)
 mgrTable <- function(df1, sortz = 1) {
   mgrz <- df1 %>%
+    replace_na(list(AccountSizeAmount = 0)) %>%
     group_by(AssetManager) %>%
     summarise(Total = n(), SumTotal = sum(AccountSizeAmount)) %>%
     replace(., is.na(.), 0)
@@ -22,10 +53,8 @@ mgrTableAC <- function(df0, assetclass, sortz = 1) {
   mgrTable(df1, sortz = sortz)
 }
 
-mgrTableAC(USmanagersQ, "Equity", sortz = 2)
-str(USmanagersQ$MainAssetClass)
-managers$MainAssetClass <- factor(managers$MainAssetClass)
 ##------function3 Asset Class totals
+## UPDATED
 roundup <- function(df1) {
   rndp <- df1 %>%
     replace_na(list(AccountSizeAmount = 0)) %>%
@@ -47,8 +76,7 @@ topMgr <- function(df1, assetclass) {
 }
 mgrTableAC(USmanagersY, "Equity")
 topMgr(USmanagersY, "Equity")
-mgrtabletestUSQ[1,]
-is.na(mgrtabletestUSQ[1,1])
+
 
 #-----function4  returns top manager (by disclosed value), used in topManagers
 ACzz <- USYroundup$MainAssetClass
@@ -93,150 +121,84 @@ roundup2 <- function(df1) {
   }
   return(dfnew)
 }
-roundup2(USmanagersQ)
+rndup2test <- roundup2(USmanagersQ)
+##UPDATED
 #--------function7 Month Tables (by # of mandates is default, enter sortz to sort by $)
-monthTable <- function(df1, sortz=1){
-  monthz <- c("10","11","12","01","02","03","04","05","06","07","08","09")
-  monthz2 <- c("Oct","Nov","Dec","Jan","Feb","March","April","May","June","July","Aug","Sept","Total1", "Total2")
-  MGR <- levels(droplevels(df1$AssetManager))
-  z <- rep(0, length(MGR)*length(monthz2))
-  #create matrix
-  m1 <- matrix(z, nrow=length(MGR), ncol=length(monthz2))
-  rownames(m1) <- MGR
-  colnames(m1) <- monthz2
-  #fill matrix
-  if(sortz==1){
-    for(i in 1:length(MGR)){
-      for(j in 1:length(monthz)){
-        m1[i,j] <- nrow(df1[df1$AssetManager==MGR[i]& df1$Month==monthz[j],])
-      }
-      m1[i, length(monthz2)-1] <- nrow(df1[df1$AssetManager==MGR[i],])
-      m1[i, length(monthz2)] <- sum(df1[df1$AssetManager==MGR[i],"AccountSizeAmount"])
-    }
-    m2 <- m1[order(m1[,13],m1[,14],decreasing = TRUE),]
-  }else{
-    for(i in 1:length(MGR)){
-      for(j in 1:length(monthz)){
-        m1[i,j] <- sum(df1[df1$AssetManager==MGR[i]& df1$Month==monthz[j],"AccountSizeAmount"])
-      }
-      m1[i, length(monthz2)-1] <- nrow(df1[df1$AssetManager==MGR[i],])
-      m1[i, length(monthz2)] <- sum(df1[df1$AssetManager==MGR[i],"AccountSizeAmount"])
-    }
-    m2 <- m1[order(m1[,14],m1[,13],decreasing = TRUE),]
+monthTable <- function(df1, sortz=1) {
+  tbl1 <- totalN(df1, AssetManager, Month)
+  tbl2 <- totalSum(df1, AssetManager, Month)
+  if(sortz == 1){
+    totalz <- data.frame(AssetManager = tbl2$AssetManager, Total1 = tbl2$Total1)
+    combined <- tbl1 %>% left_join(totalz)
+    combined <- arrange(combined, desc(Total), desc(Total1))
+  } else {
+    totalz <- data.frame(AssetManager = tbl1$AssetManager, Total = tbl1$Total)
+    combined <- tbl2 %>% left_join(totalz)
+    combined <- arrange(combined, desc(Total1), desc(Total))
   }
-  return(m2)
+  return(combined)
 }
+monthtest1 <- monthTable(USmanagersY)
+monthtest2 <- monthTable(USmanagersY, sortz = 2)
+
 
 
 #function8 manager matrix by # of mandates (by # of mandates is default, enter sortz to sort by $)
-managerMatrix <- function(df1, sortz=1){
-  MGR <- levels(droplevels(df1$AssetManager))
-  FT <- levels(droplevels(df1$FundType))
-  AC <- levels(droplevels(df1$MainAssetClass))
-  RG <- levels(droplevels(df1$MandateRegion))
-  columnz <- c("total", FT, AC, RG)
-  z <- rep(0, length(MGR)*length(columnz))
-  #create matrix
-  m1 <- matrix(z, nrow=length(MGR), ncol=length(columnz))
-  rownames(m1) <- MGR
-  colnames(m1) <- columnz
-  #fill matrix
-  if(sortz==1){
-    for(i in 1:length(MGR)){
-      m1[i,1] <- nrow(df1[df1$AssetManager==MGR[i],])
-      for(j in 2:length(columnz)){
-        m1[i,j] <- nrow(df1[df1$AssetManager==MGR[i]&(df1$FundType==columnz[j]|
-                                                                  df1$MainAssetClass==columnz[j] |
-                                                                  df1$MandateRegion==columnz[j]),])
-      }
-    }
-  }else{
-    for(i in 1:length(MGR)){
-      m1[i,1] <- sum(df1[df1$AssetManager==MGR[i],"AccountSizeAmount"])
-      for(j in 2:length(columnz)){
-        m1[i,j] <- sum(df1[df1$AssetManager==MGR[i]&(df1$FundType==columnz[j]|
-                                                                 df1$MainAssetClass==columnz[j] |
-                                                                 df1$MandateRegion==columnz[j]),"AccountSizeAmount"])
-      }
-    }
+## UPDATED
+managerMatrix <- function(df1, sortz = 1) {
+  if(sortz == 1){
+    tbl1 <- totalN(df1, AssetManager, FundType)
+    tbl2 <- totalN(df1, AssetManager, MainAssetClass)
+    tbl3 <- totalN(df1, AssetManager, MandateRegion)
+  } else {
+    tbl1 <- totalSum(df1, AssetManager, FundType)
+    tbl2 <- totalSum(df1, AssetManager, MainAssetClass)
+    tbl3 <- totalSum(df1, AssetManager, MandateRegion)
   }
-  return(m1)
+  combined <- tbl1 %>% left_join(tbl2)
+  combined <- combined %>% left_join(tbl3)
 }
+USYmx2 <- managerMatrix(USmanagersY, sortz = 2)
+
 
 #function8 manager matrix by # of mandates (by # of mandates is default, enter sortz to sort by $)
-managerMatrixEQ <- function(df1, sortz=1){
-  MGR <- levels(droplevels(df1$AssetManager))
-  FT <- levels(droplevels(df1$FundType))
-  CS <- levels(droplevels(df1$CapSize))
-  AC <- levels(droplevels(df1$Style))
-  RG <- levels(droplevels(df1$MandateRegion))
-  columnz <- c("total", FT, CS, AC, RG)
-  z <- rep(0, length(MGR)*length(columnz))
-  #create matrix
-  m1 <- matrix(z, nrow=length(MGR), ncol=length(columnz))
-  rownames(m1) <- MGR
-  colnames(m1) <- columnz
-  #fill matrix
-  if(sortz==1){
-    for(i in 1:length(MGR)){
-      m1[i,1] <- nrow(df1[df1$AssetManager==MGR[i],])
-      for(j in 2:length(columnz)){
-        m1[i,j] <- nrow(df1[df1$AssetManager==MGR[i]&(df1$FundType==columnz[j]|
-                                                                  df1$CapSize==columnz[j] |
-                                                                  df1$Style==columnz[j] |
-                                                                  df1$MandateRegion==columnz[j]),])
-      }
-    }
-  }else{
-    for(i in 1:length(MGR)){
-      m1[i,1] <- sum(df1[df1$AssetManager==MGR[i],"AccountSizeAmount"])
-      for(j in 2:length(columnz)){
-        m1[i,j] <- sum(df1[df1$AssetManager==MGR[i]&(df1$FundType==columnz[j]|
-                                                                 df1$CapSize==columnz[j] |
-                                                                 df1$Style==columnz[j] |
-                                                                 df1$MandateRegion==columnz[j]),"AccountSizeAmount"])
-      }
-    }
+## UPDATED
+managerMatrixEQ <- function(df0, sortz = 1) {
+  df1 <- df0 %>% filter(MainAssetClass == "Equity")
+  if(sortz == 1){
+    tbl1 <- totalN(df1, AssetManager, FundType)
+    tbl2 <- totalN(df1, AssetManager, CapSize)
+    tbl3 <- totalN(df1, AssetManager, Style)
+    tbl4 <- totalN(df1, AssetManager, MandateRegion)
+  } else {
+    tbl1 <- totalSum(df1, AssetManager, FundType)
+    tbl2 <- totalSum(df1, AssetManager, CapSize)
+    tbl3 <- totalSum(df1, AssetManager, Style)
+    tbl4 <- totalSum(df1, AssetManager, MandateRegion)
   }
-  return(m1)
+  combined <- tbl1 %>% left_join(tbl2)
+  combined <- combined %>% left_join(tbl3)
+  combined <- combined %>% left_join(tbl4)
 }
+USYeqMX <- managerMatrixEQ(USmanagersY)
 
 #function8 manager matrix by # of mandates (by # of mandates is default, enter sortz to sort by $)
-managerMatrixAC <- function(df1, sortz=1){
-  MGR <- levels(droplevels(df1$AssetManager))
-  FT <- levels(droplevels(df1$FundType))
-  AC <- levels(droplevels(df1$SubAssetClass))
-  RG <- levels(droplevels(df1$MandateRegion))
-  columnz <- c("total", FT, AC, RG)
-  z <- rep(0, length(MGR)*length(columnz))
-  #create matrix
-  m1 <- matrix(z, nrow=length(MGR), ncol=length(columnz))
-  rownames(m1) <- MGR
-  colnames(m1) <- columnz
-  #fill matrix
-  if(sortz==1){
-    for(i in 1:length(MGR)){
-      m1[i,1] <- nrow(df1[df1$AssetManager==MGR[i],])
-      for(j in 2:length(columnz)){
-        m1[i,j] <- nrow(df1[df1$AssetManager==MGR[i]&(df1$FundType==columnz[j]|
-                                                                  df1$SubAssetClass==columnz[j] |
-                                                                  
-                                                                  df1$MandateRegion==columnz[j]),])
-      }
-    }
-  }else{
-    for(i in 1:length(MGR)){
-      m1[i,1] <- sum(df1[df1$AssetManager==MGR[i],"AccountSizeAmount"])
-      for(j in 2:length(columnz)){
-        m1[i,j] <- sum(df1[df1$AssetManager==MGR[i]&(df1$FundType==columnz[j]|
-                                                                 df1$SubAssetClass==columnz[j] |
-                                                                 
-                                                                 df1$MandateRegion==columnz[j]),"AccountSizeAmount"])
-      }
-    }
+## UPDATED
+managerMatrixAC <- function(df0, assetclass, sortz = 1) {
+  df1 <- df0 %>% filter(MainAssetClass == assetclass)
+  if(sortz == 1){
+    tbl1 <- totalN(df1, AssetManager, FundType)
+    tbl2 <- totalN(df1, AssetManager, SubAssetClass)
+    tbl3 <- totalN(df1, AssetManager, MandateRegion)
+  } else {
+    tbl1 <- totalSum(df1, AssetManager, FundType)
+    tbl2 <- totalSum(df1, AssetManager, SubAssetClass)
+    tbl3 <- totalSum(df1, AssetManager, MandateRegion)
   }
-  return(m1)
+  combined <- tbl1 %>% left_join(tbl2)
+  combined <- combined %>% left_join(tbl3)
 }
+USYfiMX <- managerMatrixAC(USmanagersY, "Fixed Income")
 
 
 #-----function4  returns top manager (by disclosed value), used in topManagers other ac

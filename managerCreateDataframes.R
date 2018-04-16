@@ -1,4 +1,4 @@
-
+managers$MainAssetClass <- factor(managers$MainAssetClass)
 #######################CREATE DATA FRAMES############################
 #######################Create regional data frames(12 months)########
 ALLmanagersY <- filter(managers, Year == "2017")
