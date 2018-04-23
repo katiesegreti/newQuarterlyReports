@@ -31,8 +31,7 @@ q2start <- as.POSIXct("2017-04-01")
 q3start <- as.POSIXct("2017-07-01")
 q4start <- as.POSIXct("2017-10-01")
 
-mandates$MainAssetClass <- factor(mandates$MainAssetClass)
-levels(mandates$MainAssetClass)
+
 
 alternatives <- c("Alternative", "Commodities", "Derivatives", "Distressed Debt",
                   "Real Assets", "Tactical Asset Allocation")
