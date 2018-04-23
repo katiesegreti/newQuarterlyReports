@@ -47,18 +47,27 @@ mgrTable <- function(df1, sortz = 1) {
 mgrtabletestUSQ <- mgrTable(USmanagersQ)
 
 ## UPDATED 
+###CAN THIS BE REPLACED BY mgrTableX?
 ##----function #2  select asset class for manager table (default sorts by $, enter sortz to sort by #)
 mgrTableAC <- function(df0, assetclass, sortz = 1) {
   df1 <- filter(df0, MainAssetClass == assetclass)
   mgrTable(df1, sortz = sortz)
 }
-##mgrTable for subasset classes
+##mgrTable for subasset classes 
+###CAN THIS BE REPLACED BY mgrTableX?
 mgrTableSAC <- function(df0, subclass, sortz = 1) {
   df1 <- filter(df0, SubAssetClass == subclass)
   mgrTable(df1, sortz = sortz)
 }
+## this one is good
+mgrTableX <- function(df0, colname, subclass, sortz = 1) {
+  colname <- enquo(colname)
+  df1 <- filter(df0, (!!colname) == subclass)
+  mgrTable(df1, sortz = sortz)
+  
+}
 
-
+mgrTableX(USmanagersQ, MainAssetClass, "Fixed Income")
 ##------function3 Asset Class totals
 ## UPDATED
 roundup <- function(df1) {
@@ -70,7 +79,6 @@ roundup <- function(df1) {
 USQroundup <- roundup(USmanagersQ)
 USYroundup <- roundup(USmanagersY)
 
-testAClist <- USQroundup$MainAssetClass
 
 ## topMgr function used in roundup2
 topMgr <- function(df1, assetclass) {
@@ -81,7 +89,7 @@ topMgr <- function(df1, assetclass) {
   return(top[1,])
   }
 }
-mgrTableAC(USmanagersY, "Equity")
+mgrTableAC(USmanagersY, "Equity", sortz = 2)
 topMgr(USmanagersY, "Equity")
 
 
@@ -193,7 +201,14 @@ roundupAC <- function(df1) {
     summarise(Total = n(), SumTotal = sum(AccountSizeAmount))
 }
 
-
+roundupX <- function(df1, x) {
+  x <- enquo(x)
+  rndp <- df1 %>%
+    replace_na(list(AccountSizeAmount = 0)) %>%
+    group_by(!!x) %>%
+    summarise(Total = n(), SumTotal = sum(AccountSizeAmount))
+}
+t <- roundupX(USFImanagersQ, SubAssetClass)
 
 #-----function4  returns top manager (by disclosed value), used in topManagers other ac
 topMgrAC <- function(df1, subclass) {
@@ -204,8 +219,17 @@ topMgrAC <- function(df1, subclass) {
     return(top[1,])
   }
 }
-
-
+topMgrAC(USmanagersY, "Equity")
+topMgrX <- function(df1, colname, subclass) {
+  colname <- enquo(colname)
+  top <- mgrTableX(df1, !!colname, subclass, sortz = 2)
+  if(length(top) > 1 & is.na(top[1,1])) {
+    return(top[2,])
+  } else{
+    return(top[1,])
+  }
+}
+topMgrX(USmanagersQ, SubAssetClass, "Real Estate")
 #------function6 totals by asset class, with top managers for each asset class. calls topManagers.
 roundup2AC <- function(df1) {
   rndp1 <- roundupAC(df1) 
@@ -219,70 +243,22 @@ roundup2AC <- function(df1) {
   }
   return(rndp1)
 }
-roundup2AC(USFImanagersY)
-roundup2AC <- function(df1) {
-  AC <- levels(droplevels(df1$SubAssetClass))
-  mgrz <- topManagersAC(df1)
-  dfnew <- data.frame("AssetClass" = AC, "total1" = rep(0, length(AC)), "total2" = rep(0, length(AC)), 
-                      "topMgr" = rep(0, length(AC)), "mgrTotal" = rep(0, length(AC)))
-  for(i in 1:length(AC)){
-    dfnew[i,2] <- nrow(df1[df1$SubAssetClass==AC[i],])
-    dfnew[i,3] <- sum(df1[df1$SubAssetClass==AC[i], "AccountSizeAmount"])
-    dfnew[i,4] <- mgrz[i]
-    dfnew[i,5] <- sum(df1[df1$SubAssetClass==AC[i] & df1$AssetManager==mgrz[i], "AccountSizeAmount"])
-  }
-  return(dfnew)
-}
-
-
-
-
-
-
-#-----function4  returns top manager (by disclosed value), used in topManagers AC
-topmgrIR <- function(df0, subclass){
-  df1 <- df0[df0$MandateRegion==subclass,]
-  MGR <- levels(droplevels(df1$AssetManager))
-  totals <- c("total1", "total2")
-  z <- rep(0, length(MGR)*length(totals))
-  #create matrix
-  m1 <- matrix(z, nrow=length(MGR), ncol=length(totals))
-  rownames(m1) <- MGR
-  colnames(m1) <- totals
-  #fill matrix
-  if(length(MGR)==1){
-    return(MGR)
-  }
-  for(i in 1:length(MGR)){
-    m1[i,1] <- nrow(df1[df1$AssetManager==MGR[i],])
-    m1[i,2] <- sum(df1[df1$AssetManager==MGR[i], "AccountSizeAmount"])
-  }
-  m2 <- m1[order(m1[,2],m1[,1],decreasing=TRUE),]
-  cnames <- rownames(m2)
-  if(cnames[1]=="Unknown" & length(MGR)>1){
-    return(cnames[2])
-  }
-  else{
-    return(cnames[1])  
-  }
-}
-
-#------function5 calls topmgr to get a list of top managers by asset class, used in roundup2
-topManagersIR <- function(df1){
-  AC <- levels(droplevels(df1$MandateRegion))
-  topmgrz <- vector()
-  for(i in 1:length(AC)){
-    mgr <- topmgrIR(df1, AC[i])
-    if(is.null(mgr)){
-      topmgrz <- c(topmgrz, "Unknown")
-    }else{
-      topmgrz <- c(topmgrz, mgr)
-    }
-  }
-  return(topmgrz)
-}
-
+rndup2ACtest <- roundup2AC(USFImanagersY)
 #------function6 totals by asset class, with top managers for each asset class. calls topManagers.
+roundup2IR <- function(df1) {
+  rndp1 <- roundupX(df1, MandateRegion)
+  rndp1$Manager <- rep("", nrow(rndp1))
+  rndp1$MgrTotal1 <- rep(0, nrow(rndp1))
+  rndp1$MgrTotal2 <- rep(0, nrow(rndp1))
+  for(i in 1:nrow(rndp1)) {
+    rndp1$Manager[i] <- topMgrX(df1, MandateRegion, rndp1$MandateRegion[i])[[1]]
+    rndp1$MgrTotal1[i] <- topMgrX(df1, MandateRegion, rndp1$MandateRegion[i])[[2]]
+    rndp1$MgrTotal2[i] <- topMgrX(df1, MandateRegion, rndp1$MandateRegion[i])[[3]]
+  }
+  return(rndp1)
+}
+
+IRrndp <- roundup2IR(USmanagersY)
 roundup2IR <- function(df1) {
   AC <- levels(droplevels(df1$MandateRegion))
   mgrz <- topManagersIR(df1)
