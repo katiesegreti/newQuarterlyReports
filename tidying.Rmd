@@ -1,0 +1,80 @@
+---
+title: "Tidying functions"
+author: "Katie"
+date: "April 27, 2018"
+output: 
+  html_document:
+    theme: spacelab
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Tidyverse packages
+
+A while back I wrote some functions in **R** to analyze and summarize data for an ongoing quarterly report project I had been doing. I wrote them before I learned about the [tidyverse](https://www.tidyverse.org/), so I decided to go back and rewrite all the functions using the **readr**, **purrr**, **dplyr** and **tidyr** packages.
+
+```{r message = FALSE, warning = FALSE, error = FALSE}
+library(readr) 
+library(purrr) 
+library(dplyr) 
+library(tidyr) 
+```
+
+## Read in the data
+This data relates to institutional asset management activity. Each record represents a potential, new or completed search for asset managers. Identifying variables inculde *date*, *institution name*,  *institution type*, *asset class* and *investment region*.
+
+We can use the **readr** function `read_csv()` to read in a csv file. *USQ.csv* is a clean dataframe of mandate activity among US institutions for one quarter of a year.
+
+```{r message=FALSE, warning=FALSE}
+USQ <- read_csv("USmandates.csv") 
+```
+
+
+## The old functions
+
+These were the first **R** functions I had written and they turned out to be kind of a mess. I used many *for loops* and had a lot of dupicate code among functions. 
+
+I used the `is.odd()` function in many other functions to populate tables, i.e: 
+
+> if it's an odd column number, count the number of rows
+> if not, sum the values of a column
+
+```{r}
+is.odd <- function(x){x %%2 == 1}
+```
+
+Here is the original function to produce a table that summarizes the total number of searches, as well as the total dollar value of those searches, for each different asset class, by investment region. 
+
+```{r}
+PNCtableOLD <- function(df1){
+  AC <- (levels(droplevels(factor(df1$MainAssetClass))))
+  status <- c("Potential", "New", "Completed")
+  status2 <- rep(status, each = 2)
+  z <- rep(0, length(AC)*length(status)*2)
+  #create matrix
+  m1 <- matrix(z, nrow=length(AC), ncol=length(status2))
+  rownames(m1) <- AC
+  colnames(m1) <- status2
+  #fill matrix
+  for(i in 1:length(status2)){
+    for(j in 1:length(AC)){
+      if(is.odd(i)){
+        m1[j,i] <- nrow(df1[df1$SearchStatus==status2[i]&df1$MainAssetClass==AC[j],])
+      }else{
+        m1[j,i] <- nrow(df1[df1$SearchStatus==status2[i]&df1$MainAssetClass==AC[j],])
+      }
+    }
+  }
+  return(m1)
+}
+```
+I used the `levels()` and `droplevels()` functions a lot in these old functions to get the different row and column names, and also used them in my for loops. All of my old functions use for loops. Most have nested for loops like this one, to get the total number and dollar value amount for each category. 
+
+The good news is it works. See:
+
+```{r}
+PNCtableOLD(USQ)
+```
+
