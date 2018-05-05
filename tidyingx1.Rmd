@@ -36,13 +36,64 @@ We can use the **readr** function `read_csv()` to read in a csv file. *USYmanage
 USmanagersY <- read_csv("USmanagersYear.csv") 
 ```
 
-###The old functions: asset manager tables
 
-These were the first **R** functions I wrote since grad school and they turned out to be kind of a mess. I used many **for loops** and had a lot of dupicate code among functions.
+### One of the old functions: roundup by asset class
 
-Many of the tables I produced for these quarterly reports were a summary of asset managers by the number and total dollar value of the mandates they were hired for. After doing an overall summary, I would then focus on filtering by **asset class**, or **investment region**, or **investor location**, etc. In my original function-writing process, I ended up writing a different function for each of these cases. Then of course, I ended up with a lot of duplicate code.
+These were the first **R** functions I had written and they turned out to be kind of a mess. I used many *for loops* and had a lot of dupicate code among functions. 
 
-Here is the function I wrote to create a table of asset managers sorted by the number and dollar value of the accounts they were hired to manage. This is the general one that does not filter by any criteria. It's pretty long.
+Here is an original function to produce a table that summarizes the total number of managers hired, as well as the total dollar value of the portfolios assigned to those hires, for each different asset class. 
+
+```{r}
+roundupORIGINAL <- function(df1){
+  AC <- levels(droplevels(factor(df1$MainAssetClass)))
+  totals <- c("Total", "SumTotal")
+  z <- rep(0, length(AC)*length(totals))
+  #create matrix
+  m1 <- matrix(z, nrow=length(AC), ncol=length(totals))
+  rownames(m1) <- AC
+  colnames(m1) <- totals
+  #fill matrix
+  for(i in 1:length(AC)){
+    m1[i,1] <- nrow(df1[df1$MainAssetClass==AC[i],])
+    m1[i,2] <- sum(df1[df1$MainAssetClass==AC[i], "AccountSizeAmount"])
+  }
+  m2 <- m1[order(m1[,2],m1[,1],decreasing=TRUE),]
+  return(m2)
+}
+```
+I used the `levels()` and `droplevels()` functions a lot in these old functions to get row and column names for my tables, which I would then use to obtain the length of each to set the dimensions for a matrix, and then again in my *for loops* to populate the matrix.
+
+The good news is it works. See:
+
+```{r}
+roundupORIGINAL(USmanagersY)
+```
+###Updating the roundup function
+
+After learning about **dplyr** and the [tidyverse](https://www.tidyverse.org/) I realized I could use `dplyr::summary()` in conjunction with **dplyr** verbs to make most of the tables I needed, instead of calculating the dimensions to make a matrix and then using *for loops* to populate it.
+
+Here is the new version of the previous `roundup()` function. It needs zero *for loops* because I grouped and summarized using **dplyr** verbs.
+
+```{r}
+roundupNEW <- function(df1) {
+  df1 %>%
+    replace_na(list(AccountSizeAmount = 0)) %>%
+    group_by(MainAssetClass) %>%
+    summarise(Total = n(), SumTotal = sum(AccountSizeAmount)) %>%
+    arrange(desc(SumTotal), desc(Total))
+}
+```
+
+This function produces the same results with less than half the lines of code, and is easier to read and follow.
+```{r}
+roundupNEW(USmanagersY)
+```
+
+###More of the old functions: asset manager tables
+
+Many of the tables I produced for these quarterly reports were a summary of asset managers by the number and total dollar value of the mandates they were hired for. After doing an overall summary, I would then focus on filtering by asset class, or investment region, or investor location, etc. In my original function-writing process, I ended up writing a different function for each of these cases. Not surprisingly, I ended up with a lot of duplicate code.
+
+Here is the function I wrote to create a table of asset managers sorted by the number and dollar value of the accounts they were hired to manage. This one does not filter by any criteria. It's pretty long.
 
 ```{r}
 mgrTableORIGINAL <- function(df1, sortz=1){
@@ -67,9 +118,7 @@ mgrTableORIGINAL <- function(df1, sortz=1){
 }
 ```
 
-I used the `levels()` and `droplevels()` functions a lot in these old functions to get row and column names for my tables, which I would then use to obtain the length of each to set the dimensions for a matrix, and then again in my *for loops* to populate the matrix.
-
-After `mgrTableORIGINAL()` I wrote other functions that were almost exactly like the one above but filtered by some criteria. This one filters by the column *"MainAssetClass"*:
+Then I wrote other functions that were almost exactly like the one above but filtered by some criteria. This one filters by the column *"MainAssetClass"*:
 ```{r}
 mgrTableACORIGINAL <- function(df1, assetclass, sortz=1){
   dftemp <- df1[df1$MainAssetClass==assetclass,]
@@ -104,10 +153,7 @@ mgrTableACORIGINAL(USmanagersY, "Commodities")
 
 ###Updating the asset manager tables
 
-After learning about **dplyr** and the [tidyverse](https://www.tidyverse.org/) I realized I could use `dplyr::summary()` in conjunction with **dplyr** verbs to make most of the tables I needed, instead of calculating the dimensions to make a matrix and then using *for loops* to populate it.
-
-I started with a main asset manager table, which is already so much faster and cleaner than the earlier `mgrTableORIGINAL()` because it needs zero *for loops* because I grouped and summarized using **dplyr** verbs. Take a look:
-
+I started with a main asset manager table, which is already so much faster and cleaner than the earlier `mgrTableORIGINAL()` because I used **dplyr** verbs instead of all those insane `levels()` and *for loops* I used so much before. Take a look:
 
 ```{r}
 mgrTableNEW <- function(df1, sortz = 1) {
@@ -131,29 +177,6 @@ At first I wrote down a list of all the functions I had to rewrite and was going
 
 Introducing `mgrTableX()`! Instead of writing a whole new asset class-specific function, and then a new investment-region specific function, and then a cap size-specific function (and so on, and on...) I could write a function that would let me pass the column name I wanted to filter by, in addition to the filter criteria.
 
-`mgrTableX()` takes four arguments:
-
-1. `df0`: the datafeed (*USmanagersY* in this case) 
-
-2. `colname`: the column we want to filter by 
-
-3. `subclass`: the criteria to filter the column by
-
-4. `sortz`: determines whether to sort by number of hires or disclosed value of hires (default is by disclosed value)
-
-
-The `colname` and `subclass` arguments are used with `dplyr::filter()`. This was my first shot at this function:
-```{r}
-mgrTableXv1 <- function(df0, colname, subclass, sortz = 1) {
-  df1 <- filter(df0, (colname) == subclass)
-  mgrTableNEW(df1, sortz = sortz)
-}
-```
-
-It looks to me like it should work, but running `mgrTableXv1(USmanagersY, MainAssetClass, "Commodities")` gives me an error.
-
-I kept getting error messages when I first started writing functions with **dplyr** and trying to pass function arguments to **dplyr** verbs. After a lot of troubleshooting and googling in the middle of the night one night, I came across [this blog post](https://colinfay.me/tidyeval-1/) from [Colin Fay](https://twitter.com/_ColinFay) on tidy evaluation that saved me. Here I was introduced to the `enquo()` function.
-
 ```{r}
 mgrTableX <- function(df0, colname, subclass, sortz = 1) {
   colname <- enquo(colname)
@@ -163,14 +186,16 @@ mgrTableX <- function(df0, colname, subclass, sortz = 1) {
 ```
 If I do say so myself, `mgrTableX()` is a very cute little function. It takes the column name, filters by the criteria, and then calls `mgrTableNEW()` to return a table.
 
-This function call produces the same results as `mgrTableACORIGINAL(USmanagersY, "Commodities")` above.
+Let's just prove that it works first, and then I'll explain some of the more confusing stuff going on inside it. This function call produces the same results as `mgrTableACORIGINAL(USmanagersY, "Commodities")` above.
 
 ```{r}
 mgrTableX(USmanagersY, MainAssetClass, "Commodities")
 ```
 ###Tidy evaluation
 
-A couple weeks after I found that blog post and started using `enquo()` I was lucky enough to attend an [R-Ladies NYC](http://www.rladiesnyc.org/) meetup featuring a discussion by **R** guru and tidy data master [Hadley Wickham](https://twitter.com/hadleywickham). I was pleasantly surprised when Hadley spoke specifically about non standard evaluation and the `enquo()` function, because it gave me a fuller understanding of what I had already done. 
+I kept getting error messages when I first started writing functions with **dplyr** and trying to pass function arguments to **dplyr** verbs. After a lot of troubleshooting and googling in the middle of the night one night, I came across [this blog post](https://colinfay.me/tidyeval-1/) from [Colin Fay](https://twitter.com/_ColinFay) on tidy evaluation that saved me. Here I was introduced to the `enquo()` function.
+
+A couple weeks later I was lucky enough to attend an [R-Ladies NYC](http://www.rladiesnyc.org/) meetup featuring a discussion by **R** guru and tidy data master [Hadley Wickham](https://twitter.com/hadleywickham). I was pleasantly surprised when Hadley spoke specifically about non standard evaluation and the `enquo()` function, because it gave me a fuller understanding of what I had already done. 
 
 The reason I had gotten error messages and needed to use `enquo()` is because one of the arguments I passed into `mgrTableX()` was automatically quoted by **R**. So in the above function call, R would automatically wrap *MainAssetClass* in quotes. (That's *standard evaluation*.) I needed that argument to be evaluated with *tidy evaluation* instead. When using **dplyr** verbs, the column name can't be a string, which is what happens when your function arguments are automatically quoted.
 
