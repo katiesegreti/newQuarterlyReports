@@ -4,6 +4,8 @@ author: "Katie"
 date: "May 4, 2018"
 output: 
   prettydoc::html_pretty:
+    toc: true
+    toc_depth: 4
     theme: architect
     highlight: github
 ---
@@ -12,36 +14,38 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-### Tidyverse packages
+### Introducing your new friend tidyverse to your old functions
 
-A while back I wrote some **R** functions to analyze and summarize data for an ongoing quarterly report project I had been doing. I wrote them before I learned about the [tidyverse](https://www.tidyverse.org/), so now that I'm fully on board with the tidy data principles, I decided to go back and rewrite all the functions using the **readr**, **purrr**, **dplyr** and **tidyr** packages. 
+A while back I wrote some **R** functions to analyze and summarize data for an ongoing quarterly report project I had been doing. The functions worked fine and I used them for a while, but then when I learned about the [tidyverse](https://www.tidyverse.org/) I realized I could rewrite the functions more efficiently using the **readr**, **purrr**, **dplyr** and **tidyr** packages. 
 
-Unfortunately, just as I was finishing the function makeover project, I discovered I don't have this freelance job anymore! I was so close, I decided to finish making over the functions anyway, and use this makeover example in my first ever markdown.
+Unfortunately, just as I was finishing the function makeover project, I discovered I don't have this freelance job anymore! But I was so close, I decided to finish making over the functions anyway and document the process.
 
-So let's load those **tidyverse** packages.
+So let's load those **tidyverse** packages. I'm also loading the **pander** package.
 
 ```{r message = FALSE, warning = FALSE, error = FALSE}
 library(readr) 
 library(purrr) 
 library(dplyr) 
 library(tidyr) 
+library(pander)
 ```
 
-### Read in the data
+#### Read in the sample data with readr
 This data relates to institutional asset management activity. Each record represents an asset manager being hired by an investor. Identifying variables inculde *asset manager*, *date*, *institution name*,  *institution type*, *asset class* and *investment region*.
 
-We can use the **readr** function `read_csv()` to read in a csv file. *USYmanagers.csv* is a dataframe of asset manager hiring activity among US institutions (i.e. pension funds and endowments) for 12 months.
+We can use the **readr** function `read_csv()` to read in a csv file. *USYmanagers.csv* is a dataframe of asset manager hiring activity among US institutions (i.e. pension funds, foundations, endowments) for 12 months.
 
 ```{r message=FALSE, warning=FALSE}
 USmanagersY <- read_csv("USmanagersYear.csv") 
 ```
 
-###The old functions: asset manager tables
+###Original functions
 
 These were the first **R** functions I wrote since grad school and they turned out to be kind of a mess. I used many **for loops** and had a lot of dupicate code among functions.
 
-Many of the tables I produced for these quarterly reports were a summary of asset managers by the number and total dollar value of the mandates they were hired for. After doing an overall summary, I would then focus on filtering by **asset class**, or **investment region**, or **investor location**, etc. In my original function-writing process, I ended up writing a different function for each of these cases. Then of course, I ended up with a lot of duplicate code.
+Many of the tables I produced for these quarterly reports were a summary of asset managers by the number and total dollar value of the mandates they were hired for. After doing an overall summary, I then focused on filtering by **asset class**, or **investment region**, or **investor location**, etc. In my original function-writing process, I ended up writing a different function for each of these cases. Then of course, I ended up with a lot of duplicate code.
 
+####Original manager table function (general)
 Here is the function I wrote to create a table of asset managers sorted by the number and dollar value of the accounts they were hired to manage. This is the general one that does not filter by any criteria. It's pretty long.
 
 ```{r}
@@ -69,7 +73,8 @@ mgrTableORIGINAL <- function(df1, sortz=1){
 
 I used the `levels()` and `droplevels()` functions a lot in these old functions to get row and column names for my tables, which I would then use to obtain the length of each to set the dimensions for a matrix, and then again in my *for loops* to populate the matrix.
 
-After `mgrTableORIGINAL()` I wrote other functions that were almost exactly like the one above but filtered by some criteria. This one filters by the column *"MainAssetClass"*:
+####Original manager table function (filtered by asset class)
+After `mgrTableORIGINAL()` I wrote other functions that were almost exactly like the one above but filtered by some criteria. Apparently it didn't occur to me to call `MgrTableORIGINAL()` in other functions so I just rewrote it a bunch of times! This one filters by the column *"MainAssetClass"*:
 ```{r}
 mgrTableACORIGINAL <- function(df1, assetclass, sortz=1){
   dftemp <- df1[df1$MainAssetClass==assetclass,]
@@ -96,16 +101,19 @@ mgrTableACORIGINAL <- function(df1, assetclass, sortz=1){
   return(m2)
 }
 ```
-And then I had a few other similar functions that filtered by other columns such as *"InvestmentRegion"* and *"SubAssetClass"*. I'm not going to bore you with all of them here because they're all so similar and they would go on forever! But here is a function call to `mgrTableACORIGINAL()` to show you it works. This will return an asset manager summary for the asset class *"Commodities"*:
+And then I had a few other similar functions that filtered by other columns such as *"InvestmentRegion"* and *"SubAssetClass"*. 
+
+I'm not going to bore you with all of them here because they're all so similar and they would go on forever! But here is a function call to `mgrTableACORIGINAL()` to show you it works. Here is an asset manager summary for the asset class *"Commodities"*:
 
 ```{r}
-mgrTableACORIGINAL(USmanagersY, "Commodities")
+pandoc.table(mgrTableACORIGINAL(USmanagersY, "Commodities"), style = "rmarkdown")
 ```
 
-###Updating the asset manager tables
+###Updating the original asset manager tables
 
-After learning about **dplyr** and the [tidyverse](https://www.tidyverse.org/) I realized I could use `dplyr::summary()` in conjunction with **dplyr** verbs to make most of the tables I needed, instead of calculating the dimensions to make a matrix and then using *for loops* to populate it.
+After learning about **dplyr** and the [tidyverse](https://www.tidyverse.org/) I realized I could use `dplyr::summary()` in conjunction with other **dplyr** verbs to make most of the tables I needed, instead of calculating the dimensions to make a matrix and then using *for loops* to populate it.
 
+####Updated asset manager table (general)
 I started with a main asset manager table, which is already so much faster and cleaner than the earlier `mgrTableORIGINAL()` because it needs zero *for loops* because I grouped and summarized using **dplyr** verbs. Take a look:
 
 
@@ -127,13 +135,14 @@ mgrTableNEW <- function(df1, sortz = 1) {
 
 So fresh and so clean! OK, so let's move to the filtered asset manager table functions.
 
+####Updated asset manager table (filtered by any column)
 At first I wrote down a list of all the functions I had to rewrite and was going to do them one by one, but then I realized I didn't have to rewrite all of them if I just wrote one super function to replace them all. I would have to make it more generic. 
 
 Introducing `mgrTableX()`! Instead of writing a whole new asset class-specific function, and then a new investment-region specific function, and then a cap size-specific function (and so on, and on...) I could write a function that would let me pass the column name I wanted to filter by, in addition to the filter criteria.
 
 `mgrTableX()` takes four arguments:
 
-1. `df0`: the datafeed (*USmanagersY* in this case) 
+1. `df0`: the dataframe (*USmanagersY* in this case) 
 
 2. `colname`: the column we want to filter by 
 
@@ -150,7 +159,7 @@ mgrTableXv1 <- function(df0, colname, subclass, sortz = 1) {
 }
 ```
 
-It looks to me like it should work, but running `mgrTableXv1(USmanagersY, MainAssetClass, "Commodities")` gives me an error.
+It looks to me like it should work, but running `mgrTableXv1(USmanagersY, MainAssetClass, "Commodities")` gives me an **evaluation error: object 'MainAssetClass' not found.** 
 
 I kept getting error messages when I first started writing functions with **dplyr** and trying to pass function arguments to **dplyr** verbs. After a lot of troubleshooting and googling in the middle of the night one night, I came across [this blog post](https://colinfay.me/tidyeval-1/) from [Colin Fay](https://twitter.com/_ColinFay) on tidy evaluation that saved me. Here I was introduced to the `enquo()` function.
 
@@ -166,7 +175,7 @@ If I do say so myself, `mgrTableX()` is a very cute little function. It takes th
 This function call produces the same results as `mgrTableACORIGINAL(USmanagersY, "Commodities")` above.
 
 ```{r}
-mgrTableX(USmanagersY, MainAssetClass, "Commodities")
+pandoc.table(mgrTableX(USmanagersY, MainAssetClass, "Commodities"), style = "rmarkdown")
 ```
 ###Tidy evaluation
 
