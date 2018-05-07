@@ -16,18 +16,18 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ### Introducing your new friend tidyverse to your old functions
 
-A while back I wrote some **R** functions to analyze and summarize data for an ongoing quarterly report project I had been doing. The functions worked fine and I used them for a while, but then when I learned about the [tidyverse](https://www.tidyverse.org/) I realized I could rewrite the functions more efficiently using the **readr**, **purrr**, **dplyr** and **tidyr** packages. 
+A while back I wrote some **R** functions to analyze and summarize data for an ongoing quarterly report project I had been doing. The functions worked fine and I used them for a while, but then when I learned about the [tidyverse](https://www.tidyverse.org/) I realized I could rewrite the functions more efficiently using the **purrr**, **dplyr** and **tidyr** packages. 
 
 Unfortunately, just as I was finishing the function makeover project, I discovered I don't have this freelance job anymore! But I was so close, I decided to finish making over the functions anyway and document the process.
 
-So let's load those **tidyverse** packages. I'm also loading the **pander** package.
+So let's load some of the **tidyverse** packages that we'll need here. I'm also loading the **pander** package for table formatting, and **ggplot2** so I can make some summary charts later.
 
 ```{r message = FALSE, warning = FALSE, error = FALSE}
 library(readr) 
-library(purrr) 
 library(dplyr) 
 library(tidyr) 
 library(pander)
+library(ggplot2)
 ```
 
 #### Read in the sample data with readr
@@ -70,8 +70,16 @@ mgrTableORIGINAL <- function(df1, sortz=1){
   return(m2)
 }
 ```
+There's too much going on in this busy function! Let's start with the arguments:
 
-I used the `levels()` and `droplevels()` functions a lot in these old functions to get row and column names for my tables, which I would then use to obtain the length of each to set the dimensions for a matrix, and then again in my *for loops* to populate the matrix.
+1. `df1`: the dataframe(*USmanagersY* in thie case)
+2. `sortz`: determines whether to sort by number of hires or disclosed value of hires(default is disclosed value)
+
+I used the `levels()` and `droplevels()` functions on columns a lot in these old functions, which I would save as variables and use a few different ways:
+
+* To get row and column names for my tables, 
+* To find the number of categories (i.e. the `length()`), so I knew the number of rows and columns to make the matrix
+* To use as a counter in my *for loops* to populate the matrix
 
 ####Original manager table function (filtered by asset class)
 After `mgrTableORIGINAL()` I wrote other functions that were almost exactly like the one above but filtered by some criteria. Apparently it didn't occur to me to call `MgrTableORIGINAL()` in other functions so I just rewrote it a bunch of times! This one filters by the column *"MainAssetClass"*:
@@ -101,6 +109,13 @@ mgrTableACORIGINAL <- function(df1, assetclass, sortz=1){
   return(m2)
 }
 ```
+So this one takes three arguments:
+1. `df1`: the dataframe(*USmanagersY* in this case)
+2. `assetclass`: a string of the asset class to filter by
+3. `sortz`: determines whether to sort by number of hires or disclosed value of hires(default is disclosed value)
+
+It's pretty much the same as the general one above, it just filters by an asset class before it creates a table. 
+
 And then I had a few other similar functions that filtered by other columns such as *"InvestmentRegion"* and *"SubAssetClass"*. 
 
 I'm not going to bore you with all of them here because they're all so similar and they would go on forever! But here is a function call to `mgrTableACORIGINAL()` to show you it works. Here is an asset manager summary for the asset class *"Commodities"*:
@@ -133,20 +148,22 @@ mgrTableNEW <- function(df1, sortz = 1) {
 }
 ```
 
-So fresh and so clean! OK, so let's move to the filtered asset manager table functions.
+So fresh and so clean! It takes the same two arguments as `MgrTableORIGINAL()`. Instead of creating a matrix and using a for loop to populate it, it uses the **dplyr** verbs `group_by()`, `summarise()` and `arrange()`, as well as the **tidyr** function `replace_na()` in order to replace *NA* *AccountSizeAmount* values with zeroes.
+
+OK, I think that looks pretty easy to understand (espcially compared to the ORIGINALS) so let's move to the filtered asset manager table functions.
 
 ####Updated asset manager table (filtered by any column)
 At first I wrote down a list of all the functions I had to rewrite and was going to do them one by one, but then I realized I didn't have to rewrite all of them if I just wrote one super function to replace them all. I would have to make it more generic. 
 
 Introducing `mgrTableX()`! Instead of writing a whole new asset class-specific function, and then a new investment-region specific function, and then a cap size-specific function (and so on, and on...) I could write a function that would let me pass the column name I wanted to filter by, in addition to the filter criteria.
 
-`mgrTableX()` takes four arguments:
+`mgrTableX()` takes four arguments. (Note that `colname` is the only addition to the three arugments from `MgrTableACORIGINAL()`):
 
 1. `df0`: the dataframe (*USmanagersY* in this case) 
 
 2. `colname`: the column we want to filter by 
 
-3. `subclass`: the criteria to filter the column by
+3. `subclass`: a string of the criteria to filter the column by
 
 4. `sortz`: determines whether to sort by number of hires or disclosed value of hires (default is by disclosed value)
 
@@ -177,7 +194,7 @@ This function call produces the same results as `mgrTableACORIGINAL(USmanagersY,
 ```{r}
 pandoc.table(mgrTableX(USmanagersY, MainAssetClass, "Commodities"), style = "rmarkdown")
 ```
-###Tidy evaluation
+###Understanding more about tidy evaluation
 
 A couple weeks after I found that blog post and started using `enquo()` I was lucky enough to attend an [R-Ladies NYC](http://www.rladiesnyc.org/) meetup featuring a discussion by **R** guru and tidy data master [Hadley Wickham](https://twitter.com/hadleywickham). I was pleasantly surprised when Hadley spoke specifically about non standard evaluation and the `enquo()` function, because it gave me a fuller understanding of what I had already done. 
 
@@ -187,4 +204,42 @@ As I learned from Hadley, a good way to know if your argument is automatically q
 
 So I reassigned the `mgrTableX()` function argument *colname* with `colname <- enquo(colname)`. Then when I needed to use it with `filter()`, I added *!!* (pronounced "bang bang") to the beginning `(!!colname)`. Then it works just the way I need it to.
 
+###Summary
+By all means I consider the tidying of my asset manager functions a success. 
 
+First of all, I was able to reduce the number of functions I needed from 22 to 17.
+
+```{r echo = FALSE}
+before <- c(22, 493)
+after <- c(17, 253)
+rowz <- c("before", "after")
+summary <- data.frame(rbind(before, after))
+summary <- cbind(rowz, summary)
+colnames(summary) <- c("status", "numberOfFunctions", "linesOfCode")
+
+ggplot(summary, aes(x = reorder(status, -numberOfFunctions), y = numberOfFunctions, label = numberOfFunctions)) + 
+  geom_col(fill = "blue") +
+  xlab("") +
+  ylab("number of functions") +
+  ggtitle("before tidying vs. after tidying", subtitle = "number of functions") +
+  theme(plot.title = element_text(face="bold", size=18, hjust=0)) +
+  geom_text(position = position_dodge(width = 1),
+            vjust = -0.4, size = 4)
+
+```
+
+And perhaps more impressively, I reduced the lines of code by 49%, from an insane *493 lines* down to just *253*!
+
+```{r echo = FALSE}
+ggplot(summary, aes(x = reorder(status, -linesOfCode), y = linesOfCode, label = linesOfCode)) + 
+  geom_col(fill = "red") +
+  xlab("") +
+  ylab("lines of code") +
+  ggtitle("before tidying vs. after tidying", subtitle = "lines of code") +
+  theme(plot.title = element_text(face="bold", size=18, hjust=0)) +
+  geom_text(position = position_dodge(width = 1),
+            vjust = -0.4, size = 4)
+
+```
+
+In conclusion, I am very pleased with the progress I made implementing tidyverse practices into my old functions. If you have some old functions that you've been using for years, it's worth the time to look at them and figure out how to make them more efficient. 
